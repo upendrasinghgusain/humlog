@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/sync.Tests/">
+    <Project Path="sync.Tests/Humlog.Sync.Tests.csproj" />
+  </Folder>
+  <Folder Name="/sync/">
+    <Project Path="sync/Humlog.Sync.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote keys</title>
+<style>
+  body { margin: 0; padding: 3%; background: #000; color: #fff; font-family: sans-serif; }
+  h1 { font-size: 2em; color: #aaa; font-weight: normal; }
+  #last { font-size: 6em; margin: 0.3em 0; }
+  #log { font-size: 1.8em; color: #ccc; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>Press each remote button. Note the number shown.</h1>
+<div id="last">&ndash;</div>
+<div id="log"></div>
+<script>
+  (function () {
+    var last = document.getElementById('last');
+    var log = document.getElementById('log');
+    var lines = [];
+    function record(kind, e) {
+      var text = kind + ' ' + e.keyCode + (e.key ? '  key=' + e.key : '') + (e.code ? '  code=' + e.code : '');
+      last.textContent = e.keyCode;
+      lines.unshift(text);
+      if (lines.length > 12) lines.pop();
+      log.innerHTML = lines.join('<br>');
+    }
+    document.addEventListener('keydown', function (e) { record('keydown', e); e.preventDefault(); });
+    document.addEventListener('keyup', function (e) { record('keyup', e); });
+  })();
+</script>
+</body>
+</html>

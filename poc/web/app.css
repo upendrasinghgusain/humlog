@@ -1,0 +1,98 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: sans-serif;
+  cursor: none;
+}
+
+#stage, .slide, .fill, .media {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.slide {
+  overflow: hidden;
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transition: -webkit-transform 0.6s ease, opacity 0.6s ease;
+  transition: transform 0.6s ease, opacity 0.6s ease;
+}
+
+.slide.instant {
+  -webkit-transition: none;
+  transition: none;
+}
+
+/* Tiny version of the same picture, stretched (so it looks blurred) and darkened: fills the sides of
+   portrait items. No CSS filter: it is far too slow on the TV. */
+.fill {
+  background-size: cover;
+  background-position: center;
+}
+
+.fill:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.media {
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Video turned by app.js because the TV ignored its rotation flag; size and transform are set inline. */
+.media.rotated {
+  top: 50%;
+  left: 50%;
+}
+
+.badge {
+  position: absolute;
+  top: 5%;
+  right: 4%;
+  padding: 0.5em 1em;
+  border-radius: 0.4em;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 2.2em;
+}
+
+.badge.hint {
+  top: auto;
+  bottom: 6%;
+}
+
+.bars {
+  display: inline-block;
+  width: 0.25em;
+  height: 0.8em;
+  margin-right: 0.6em;
+  border-left: 0.25em solid #fff;
+  border-right: 0.25em solid #fff;
+  vertical-align: -0.05em;
+}
+
+#msg {
+  position: absolute;
+  top: 45%;
+  width: 100%;
+  text-align: center;
+  font-size: 2.5em;
+  color: #ccc;
+}
+
+.hidden {
+  display: none;
+}

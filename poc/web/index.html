@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Humlog</title>
+<script>
+  // The TV's address (/tv/?key=...) has no login; Cloudflare checks the key on every request,
+  // so pass it on to the page's own files. Without a key this just loads them normally.
+  var KEY_QUERY = (function () {
+    var m = /[?&]key=([^&#]+)/.exec(location.search);
+    return m ? 'key=' + m[1] : '';
+  })();
+  document.write('<link rel="stylesheet" href="app.css' + (KEY_QUERY ? '?' + KEY_QUERY : '') + '">');
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div id="paused" class="badge hidden"><span class="bars"></span>Paused</div>
+<div id="hint" class="badge hint hidden">Press OK for sound</div>
+<div id="msg">Loading photos&hellip;</div>
+<script>
+  document.write('<script src="app.js' + (KEY_QUERY ? '?' + KEY_QUERY : '') + '"><\/script>');
+</script>
+</body>
+</html>
