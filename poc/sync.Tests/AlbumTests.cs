@@ -56,20 +56,29 @@ public class AlbumTests
         var video = AlbumParser.ToItem(JsonNode.Parse(Video)!.AsArray())!;
 
         Assert.Equal(new CatalogueItem("AF1QipPhoto1", "photo", "https://lh3.googleusercontent.com/pw/photo1", 2048, 1536,
-            DateTimeOffset.FromUnixTimeMilliseconds(1376813242000), null), photo);
+            DateTimeOffset.FromUnixTimeMilliseconds(1376813242000), DateTimeOffset.FromUnixTimeMilliseconds(1794586995510), null), photo);
         Assert.Equal("video", video.Type);
         Assert.Equal(287046, video.DurationMs);
         Assert.Equal((1080, 1920), (video.W, video.H));
     }
 
     [Fact]
-    public void Catalogue_is_newest_first_deduplicated_and_skips_malformed()
+    public void Added_time_falls_back_to_taken_time_when_missing()
     {
-        var entries = new[] { Photo, Video, Malformed, Later, Photo }.Select(e => JsonNode.Parse(e)!.AsArray());
+        var item = AlbumParser.ToItem(JsonNode.Parse("""["AF1QipShort",["https://x",10,10],1794600000000]""")!.AsArray())!;
+
+        Assert.Equal(item.TakenUtc, item.AddedUtc);
+    }
+
+    [Fact]
+    public void Catalogue_is_recently_added_first_then_newest_taken_deduplicated_and_skips_malformed()
+    {
+        // Later was taken last but added long ago; Photo and Video were added together, Video taken more recently.
+        var entries = new[] { Later, Photo, Video, Malformed, Photo }.Select(e => JsonNode.Parse(e)!.AsArray());
 
         var catalogue = CatalogueBuilder.Build(entries, DateTimeOffset.UnixEpoch, out var skipped);
 
-        Assert.Equal(["AF1QipPhoto2", "AF1QipVideo1", "AF1QipPhoto1"], catalogue.Items.Select(i => i.Id));
+        Assert.Equal(["AF1QipVideo1", "AF1QipPhoto1", "AF1QipPhoto2"], catalogue.Items.Select(i => i.Id));
         Assert.Equal(1, skipped);
     }
 
@@ -101,7 +110,7 @@ public class AlbumTests
 
         var item = JsonNode.Parse(JsonSerializer.Serialize(catalogue, CatalogueBuilder.Json))!["items"]![0]!.AsObject();
 
-        Assert.Equal(["id", "type", "src", "w", "h", "takenUtc", "durationMs"], item.Select(p => p.Key));
+        Assert.Equal(["id", "type", "src", "w", "h", "takenUtc", "addedUtc", "durationMs"], item.Select(p => p.Key));
     }
 
     [Fact]

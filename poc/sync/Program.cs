@@ -12,7 +12,12 @@ builder.Services.AddHttpClient<AlbumClient>(http =>
     http.DefaultRequestHeaders.UserAgent.ParseAdd(AlbumClient.UserAgent);
     http.Timeout = TimeSpan.FromSeconds(60);
 });
-builder.Services.AddHttpClient<VideoProbe>(http => http.Timeout = TimeSpan.FromSeconds(30));
+// Google refuses its transcodes (=m22/=m37) to clients without a browser User-Agent.
+builder.Services.AddHttpClient<VideoProbe>(http =>
+{
+    http.DefaultRequestHeaders.UserAgent.ParseAdd(AlbumClient.UserAgent);
+    http.Timeout = TimeSpan.FromSeconds(30);
+});
 // The website lives in its own firewalled account (reached over the VNet); the function's own account keeps sync state.
 builder.Services.AddSingleton(_ => new CatalogueStore(new BlobServiceClient(builder.Configuration["WEB_STORAGE"])));
 builder.Services.AddSingleton(_ => new ProbeCache(new BlobServiceClient(builder.Configuration["AzureWebJobsStorage"])));

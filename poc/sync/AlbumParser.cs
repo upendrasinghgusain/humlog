@@ -61,6 +61,7 @@ public static partial class AlbumParser
         var extra = entry[^1] as JsonObject;
         var isVideo = extra?[VideoKey] is not null;
         long? durationMs = isVideo && extra![VideoKey] is JsonArray info && info.Count > 0 && TryLong(info[0], out var d) ? d : null;
+        var taken = DateTimeOffset.FromUnixTimeMilliseconds(takenMs);
 
         return new CatalogueItem(
             Id: id,
@@ -68,7 +69,9 @@ public static partial class AlbumParser
             Src: url,
             W: (int)w,
             H: (int)h,
-            TakenUtc: DateTimeOffset.FromUnixTimeMilliseconds(takenMs),
+            TakenUtc: taken,
+            // When it was added to the album; observed in real data (2026-11-15) but not guaranteed, so fall back to taken.
+            AddedUtc: entry.Count > 5 && TryLong(entry[5], out var addedMs) ? DateTimeOffset.FromUnixTimeMilliseconds(addedMs) : taken,
             DurationMs: durationMs);
     }
 

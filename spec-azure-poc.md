@@ -36,7 +36,7 @@ Google can change the share page's internal format at any time. When that happen
 | Paging to the rest of the album | ✅ Via the page's own data endpoint (`batchexecute`, RPC `snAcKc`) with continuation token + share key — 4 pages |
 | Total items | **1,130** (1,068 photos, **62 videos**), 2013-08-18 → 2026-11-12 (live) |
 | Photos load anonymously | ✅ `…=w1920-h1080` → 214 KB JPEG, resized by Google; `…=w480-h480` thumbnail |
-| Videos load anonymously | ⚠️ Only the original file via `…=dv` (200, `video/mp4`). **No range requests** (no seeking). Google's streaming variants (`=m18/22/37`) return 403. |
+| Videos load anonymously | ⚠️ Only the original file via `…=dv` (200, `video/mp4`). **No range requests** (no seeking). Google's transcodes (`=m18/22/37`) return 403 **only when a Referer header is sent**; without one, and with a browser User-Agent, they load (206, ranges, upright H.264). The page sends no referrer; the Sync function's probe sends a browser User-Agent. |
 | Sample video format | H.264 + AAC, `moov` at start (plays progressively), 1080×1920, ~4.8 min, **400 MB** |
 
 **Conclusion:** photos are straightforward. Videos work in principle but the originals are very large and not seekable, so they need special handling (§6).
@@ -77,13 +77,13 @@ Storage account static website ($web): index.html, app.js, catalogue.json  ◄�
 {
   "generatedUtc": "2026-11-14T10:00:00Z",
   "items": [
-    { "id": "AF1Qip…", "type": "photo", "src": "https://lh3.googleusercontent.com/pw/…", "w": 3060, "h": 4080, "takenUtc": "2026-11-12T…" },
-    { "id": "AF1Qip…", "type": "video", "src": "…", "w": 1080, "h": 1920, "takenUtc": "…", "durationMs": 19351, "playable": false }
+    { "id": "AF1Qip…", "type": "photo", "src": "https://lh3.googleusercontent.com/pw/…", "w": 3060, "h": 4080, "takenUtc": "2026-11-12T…", "addedUtc": "2026-11-15T…" },
+    { "id": "AF1Qip…", "type": "video", "src": "…", "w": 1080, "h": 1920, "takenUtc": "…", "addedUtc": "…", "durationMs": 19351, "variant": "=m22" }
   ]
 }
 ```
 
-`src` is Google's base URL; the page appends `=w{W}-h{H}` (photo, poster) or `=dv` (video file). `playable` is absent until the video has been probed. Newest first.
+`src` is Google's base URL; the page appends `=w{W}-h{H}` (photo, poster) or the video's `variant` (`=m37`, `=m22` or `=dv`; the page uses `=dv` until the video has been probed). `addedUtc` is when the item was added to the album (entry field 5 of the share page data; falls back to `takenUtc`). Most recently added first, then newest taken first.
 
 Sync safety rules: write only if the parse succeeded and the item count is ≥ 50% of the previous catalogue; keep the previous version as `catalogue.prev.json`; log every failure.
 
@@ -97,31 +97,38 @@ One full-screen slideshow. No menus.
 | **Right** | Next | Skip to next |
 | **Left** | Previous | Previous |
 | **OK** / Play-Pause | Pause / resume | Pause / resume |
+| **Up** / Red | Back to the normal order | Back to the normal order |
+| **Down** / Green | Shuffle everything | Shuffle everything |
 | **Back** | Nothing (stays in app) | Nothing |
 
-- Horizontal slide transition (Instagram, sideways).
+- Crossfade between items (`?fx=slide` for a horizontal slide; fade was smoothest on the TV).
+- Every remote press shows a short label ("Next", "Previous", "Newest first", "Shuffled") straight away.
 - "⏸ Paused" badge while paused.
 - Portrait photos/videos shown whole, centred, with a blurred copy of the same image filling the sides.
-- **Order: newest first**, then backwards in time, looping. When the sync finds new items, they are played next.
+- **Order: added in the last 7 days first** (most recently added first), then the rest shuffled, looping. When the sync finds new items, they are played next. Up/Red returns to this order; Down/Green shuffles everything.
 - Videos autoplay with sound. If the browser blocks sound, play muted with "🔇 Press OK for sound"; once unmuted, stays unmuted.
 - If a video fails to load or play within 15 s, skip it.
 
-URL overrides for testing only: `?secs=12`, `?order=shuffle`, `?fx=fade|none`, `?photosOnly=1`.
+URL overrides for testing only: `?secs=12`, `?newDays=7`, `?fx=fade|none`, `?photosOnly=1`.
 
 ## 6. Videos — phased
 
-**Phase A (deployed):** play the original via `=dv` directly on the TV. Videos longer than **3 minutes** are skipped.
+**Phase A (deployed):** play Google's own transcode (`=m37`, else `=m22`), falling back to the original via `=dv`, directly on the TV. Videos longer than **3 minutes** are skipped.
 
 Finding after deploy: originals vary wildly. WhatsApp-sourced clips are small H.264 with the index (`moov`) first (~1 Mbit/s) and stream fine. Clips uploaded straight from phones are often enormous (e.g. 19 s = 990 MB, ~430 Mbit/s) with the index at the end; without range support a browser must download the whole file before playing. So the Sync function **probes each video once** (first 256 KB: `moov` before `mdat`, codec `avc1`, size ≤ 200 MB) and marks the rest `"playable": false`; the page skips those instantly. Probing is slow (Google takes seconds to start each original), so it has a 2-minute budget per run and carries on next run.
 
-**Phase B (if Phase A struggles on the TV):** the Sync function downloads each new video once, transcodes it with ffmpeg to 720p H.264/AAC (~2–4 Mbps, `+faststart`), stores it in Blob Storage (seekable, ~10–30× smaller), and the catalogue points to that copy. Runs on a Container Apps job (ffmpeg in a container). One-off cost to process the existing 62 videos; then only new ones.
+Update (2026-11-15): the TV ignores CSS rotation on video (it draws video on a separate hardware layer), so the page's rotate-it-ourselves fix only cropped sideways videos. Google's own transcodes turned out to be usable after all (see §3), and they are upright. The probe now picks, per video, the first variant that streams: `=m37` (1080p), `=m22` (720p), then `=dv`. Result: 68 of 70 videos play a transcode, 2 tiny old ones the original (still sideways), none skipped. The page falls back to `=dv` once if a transcode won't load on the TV.
+
+**Phase B (no longer needed; Google's transcodes do the job):** the Sync function downloads each new video once, transcodes it with ffmpeg to 720p H.264/AAC (~2–4 Mbps, `+faststart`), stores it in Blob Storage (seekable, ~10–30× smaller), and the catalogue points to that copy. Runs on a Container Apps job (ffmpeg in a container). One-off cost to process the existing 62 videos; then only new ones.
 
 ## 7. TV browser constraints
 
 - Old Chromium base: plain ES5-style JavaScript, no frameworks, no modules, no `async/await`, no optional chaining.
 - One HTML, one CSS, one JS file; no third-party CDNs.
 - Only current + next item in the DOM; release `<video>` sources after use.
-- Keys: 37/39 Left/Right, 13 OK, 415/19 Play/Pause, 461 Back — **to be confirmed** on the TV with `/keys.html` (shows every key event in large text).
+- Keys: 37/39 Left/Right, 38/403 Up/Red, 40/404 Down/Green, 13 OK, 415/19 Play/Pause, 461 Back — **to be confirmed** on the TV with `/keys.html` (shows every key event in large text).
+- The page must take keyboard focus itself on load: opening a bookmark can leave focus on the browser's toolbar.
+- Video is drawn on a hardware layer: CSS transforms (rotation) aren't applied to it.
 
 ## 8. Project layout
 
@@ -152,5 +159,5 @@ humlog/
 
 ## 10. Open questions
 
-1. Order: newest-first (current default) vs. shuffle with recent items favoured — decide after watching it on the TV.
+1. ~~Order~~ — decided: added in the last 7 days first, then shuffled; Down/Green shuffles everything.
 2. Who tests on the TV, and when?

@@ -7,6 +7,7 @@ html, body {
   color: #fff;
   font-family: sans-serif;
   cursor: none;
+  outline: none; /* body takes focus so remote keys reach the page; no focus ring */
 }
 
 #stage, .slide, .fill, .media {
@@ -53,12 +54,6 @@ html, body {
   background: transparent;
 }
 
-/* Video turned by app.js because the TV ignored its rotation flag; size and transform are set inline. */
-.media.rotated {
-  top: 50%;
-  left: 50%;
-}
-
 .badge {
   position: absolute;
   top: 5%;
@@ -72,6 +67,11 @@ html, body {
 .badge.hint {
   top: auto;
   bottom: 6%;
+}
+
+.badge.mode {
+  right: auto;
+  left: 4%;
 }
 
 .bars {

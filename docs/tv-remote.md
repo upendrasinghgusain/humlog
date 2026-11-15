@@ -12,5 +12,7 @@ Open `https://humlog.upendragusain.co.uk/tv/keys.html?key=<TV key>` in the TV br
 | Back | 461 | |
 | Up (start again from newest) | 38 | |
 | Red (start again from newest) | 403 | |
+| Down (shuffle everything) | 40 | |
+| Green (shuffle everything) | 404 | |
 
 If a code differs, update the `keydown` switch in `poc/web/app.js`.

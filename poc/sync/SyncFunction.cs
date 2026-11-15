@@ -77,8 +77,9 @@ public sealed class SyncFunction(
         if (probed > 0)
         {
             await probes.SaveAsync(results, ct);
-            log.LogInformation("Probed {Probed} new videos; {Playable} of {Total} known videos play directly",
-                probed, results.Values.Count(v => v.Playable), results.Count);
+            log.LogInformation("Probed {Probed} new videos; of {Total} known: {Transcoded} transcoded, {Original} original, {None} unplayable",
+                probed, results.Count, results.Values.Count(v => v.Variant is "=m37" or "=m22"),
+                results.Values.Count(v => v.Variant == "=dv"), results.Values.Count(v => v.Variant is null));
         }
         return results;
     }
